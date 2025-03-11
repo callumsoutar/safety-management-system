@@ -3,6 +3,10 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { ATTACHMENTS_BUCKET } from '@/lib/supabase/storage';
 
+// Add App Router configuration
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
