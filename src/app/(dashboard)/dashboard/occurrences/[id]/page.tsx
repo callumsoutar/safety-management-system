@@ -356,7 +356,7 @@ const AttachmentsTab = ({ occurrenceId }: { occurrenceId: string }) => {
   const fetchAttachments = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/attachments/${occurrenceId}`);
+      const response = await fetch(`/api/attachments/${occurrenceId}/list`);
       
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
