@@ -4,11 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ATTACHMENTS_BUCKET, getPublicUrl } from '@/lib/supabase/storage';
 import { isAllowedFileType, isAllowedFileSize, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '@/lib/utils/fileUtils';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// This is the new way to configure API routes in App Router
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
