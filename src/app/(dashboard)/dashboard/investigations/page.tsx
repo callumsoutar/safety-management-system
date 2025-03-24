@@ -216,7 +216,9 @@ export default function InvestigationsPage() {
       case 'completed':
         return 'Completed';
       default:
-        return stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, ' ');
+        // This is a type-safe way to handle the string
+        const stageStr = stage as string;
+        return stageStr.charAt(0).toUpperCase() + stageStr.slice(1).replace(/_/g, ' ');
     }
   };
 
