@@ -113,7 +113,7 @@ export default function SimpleInvestigationPage() {
       <div className="p-6">
         <div className="text-center">
           <p className="text-gray-700 font-medium mb-2">Not Found</p>
-          <p className="text-gray-500">The investigation you're looking for doesn't exist or you don't have permission to view it.</p>
+          <p className="text-gray-500">The investigation you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to view it.</p>
         </div>
       </div>
     );
