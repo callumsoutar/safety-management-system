@@ -28,7 +28,7 @@ const navItems = [
   },
   {
     label: "Occurrences",
-    href: "/occurrences",
+    href: "/dashboard/occurrences",
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -48,7 +48,7 @@ const navItems = [
   },
   {
     label: "Investigations",
-    href: "/investigations",
+    href: "/dashboard/investigations",
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"

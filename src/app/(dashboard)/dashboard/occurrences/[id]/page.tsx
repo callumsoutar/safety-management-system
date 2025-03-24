@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import InvestigationProgress from "@/components/occurrences/InvestigationProgress";
 import OccurrenceDetails from "@/components/occurrences/OccurrenceDetails";
 import OccurrenceInformation from "@/components/occurrences/OccurrenceInformation";
 import InvestigationDetails from "@/components/occurrences/InvestigationDetails";
+import OccurrenceValidity from "@/components/occurrences/OccurrenceValidity";
 import { format } from "date-fns";
 import { formatFileSize as formatFileSizeUtil, isAllowedFileType, isAllowedFileSize, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '@/lib/utils/fileUtils';
 import { Attachment } from '@/types';
 import FileIcon from '@/components/ui/FileIcon';
+import useSWR from "swr";
 
 // Tab types
-type TabType = "details" | "investigation" | "attachments" | "comments" | "history";
+type TabType = "details" | "validity" | "investigation" | "attachments" | "comments" | "history";
 
 interface OccurrenceData {
   occurrence: any;
@@ -22,38 +23,61 @@ interface OccurrenceData {
   investigation: any;
 }
 
+// Define the type for params
+interface OccurrenceParams {
+  id: string;
+  [key: string]: string | string[];
+}
+
+// Fetcher function for SWR
+const fetcher = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}`);
+  }
+  return response.json();
+};
+
 export default function OccurrencePage() {
-  const params = useParams();
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<OccurrenceData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const params = useParams() as OccurrenceParams;
+  const occurrenceId = params?.id || '';
   const [activeTab, setActiveTab] = useState<TabType>("details");
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  // Use SWR for data fetching with caching
+  const { data, error, isLoading, mutate } = useSWR<OccurrenceData>(
+    occurrenceId ? `/api/occurrences/${occurrenceId}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateIfStale: true,
+      revalidateOnReconnect: true
+    }
+  );
+
+  // Initialize tab from URL hash and handle hash changes
   useEffect(() => {
-    const fetchOccurrence = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/occurrences/${params.id}`);
-        
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        setData(data);
-      } catch (err) {
-        console.error("Failed to fetch occurrence:", err);
-        setError("Failed to load occurrence details. Please try again later.");
-      } finally {
-        setLoading(false);
+    const hash = window.location.hash.replace('#', '') as TabType;
+    if (hash && ['details', 'validity', 'investigation', 'attachments', 'comments', 'history'].includes(hash)) {
+      setActiveTab(hash);
+    }
+
+    const handleHashChange = () => {
+      const newHash = window.location.hash.replace('#', '') as TabType;
+      if (newHash && ['details', 'validity', 'investigation', 'attachments', 'comments', 'history'].includes(newHash)) {
+        setActiveTab(newHash);
       }
     };
 
-    if (params.id) {
-      fetchOccurrence();
-    }
-  }, [params.id]);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Update URL hash when tab changes
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    window.location.hash = tab;
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -74,7 +98,7 @@ export default function OccurrencePage() {
     setDropdownOpen(!dropdownOpen);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -104,13 +128,13 @@ export default function OccurrencePage() {
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           <p className="text-gray-700 font-medium mb-2">Error</p>
-          <p className="text-gray-500">{error}</p>
+          <p className="text-gray-500">{error.message}</p>
         </div>
       </div>
     );
   }
 
-  if (!data || !data.occurrence) {
+  if (!data) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -151,6 +175,10 @@ export default function OccurrencePage() {
             />
           </div>
         );
+      case "validity":
+        return (
+          <OccurrenceValidity occurrenceId={occurrenceId} />
+        );
       case "investigation":
         return (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -179,15 +207,15 @@ export default function OccurrencePage() {
         );
       case "attachments":
         return (
-          <AttachmentsTab occurrenceId={params.id as string} />
+          <AttachmentsTab occurrenceId={occurrenceId} />
         );
       case "comments":
         return (
-          <CommentsTab occurrenceId={params.id as string} />
+          <CommentsTab occurrenceId={occurrenceId} />
         );
       case "history":
         return (
-          <HistoryTab occurrenceId={params.id as string} />
+          <HistoryTab occurrenceId={occurrenceId} />
         );
       default:
         return null;
@@ -205,7 +233,7 @@ export default function OccurrencePage() {
         </div>
         <div className="flex space-x-2">
           <Link 
-            href={`/dashboard/occurrences/${params.id}/edit`}
+            href={`/dashboard/occurrences/${occurrenceId}/edit`}
             className="inline-flex items-center justify-center p-2 rounded-md border border-gray-200 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
           >
             <svg
@@ -247,13 +275,13 @@ export default function OccurrencePage() {
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
                 <div className="py-1">
                   <Link 
-                    href={`/dashboard/occurrences/${params.id}/edit`}
+                    href={`/dashboard/occurrences/${occurrenceId}/edit`}
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     Edit Occurrence
                   </Link>
                   <Link 
-                    href={`/dashboard/occurrences/${params.id}/investigation`}
+                    href={`/dashboard/occurrences/${occurrenceId}/investigation`}
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     View Full Investigation
@@ -263,7 +291,7 @@ export default function OccurrencePage() {
                     onClick={() => {
                       if (confirm("Are you sure you want to delete this occurrence?")) {
                         // Handle delete logic here
-                        console.log("Delete occurrence", params.id);
+                        console.log("Delete occurrence", occurrenceId);
                       }
                     }}
                   >
@@ -276,10 +304,6 @@ export default function OccurrencePage() {
         </div>
       </div>
 
-      <InvestigationProgress 
-        currentStage={data.investigation?.stage || "not_started"} 
-      />
-
       {/* Tab navigation */}
       <div className="mb-6 border-b">
         <div className="flex space-x-4">
@@ -289,9 +313,19 @@ export default function OccurrencePage() {
                 ? "border-b-2 border-blue-500 text-blue-500" 
                 : "text-gray-500 hover:text-gray-700"
             }`}
-            onClick={() => setActiveTab("details")}
+            onClick={() => handleTabChange("details")}
           >
             Details
+          </button>
+          <button 
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === "validity" 
+                ? "border-b-2 border-blue-500 text-blue-500" 
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+            onClick={() => handleTabChange("validity")}
+          >
+            Validity
           </button>
           <button 
             className={`px-4 py-2 font-medium transition-colors ${
@@ -299,7 +333,7 @@ export default function OccurrencePage() {
                 ? "border-b-2 border-blue-500 text-blue-500" 
                 : "text-gray-500 hover:text-gray-700"
             }`}
-            onClick={() => setActiveTab("investigation")}
+            onClick={() => handleTabChange("investigation")}
           >
             Investigation
           </button>
@@ -309,7 +343,7 @@ export default function OccurrencePage() {
                 ? "border-b-2 border-blue-500 text-blue-500" 
                 : "text-gray-500 hover:text-gray-700"
             }`}
-            onClick={() => setActiveTab("attachments")}
+            onClick={() => handleTabChange("attachments")}
           >
             Attachments
           </button>
@@ -319,7 +353,7 @@ export default function OccurrencePage() {
                 ? "border-b-2 border-blue-500 text-blue-500" 
                 : "text-gray-500 hover:text-gray-700"
             }`}
-            onClick={() => setActiveTab("comments")}
+            onClick={() => handleTabChange("comments")}
           >
             Comments
           </button>
@@ -329,7 +363,7 @@ export default function OccurrencePage() {
                 ? "border-b-2 border-blue-500 text-blue-500" 
                 : "text-gray-500 hover:text-gray-700"
             }`}
-            onClick={() => setActiveTab("history")}
+            onClick={() => handleTabChange("history")}
           >
             History
           </button>

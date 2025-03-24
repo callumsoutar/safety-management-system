@@ -5,7 +5,6 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import SupabaseProvider from "@/providers/SupabaseProvider";
 import UserProvider from "@/providers/UserProvider";
 import { initializeStorage } from '@/lib/supabase/storage';
-import ClientReloadPreventer from "./ClientReloadPreventer";
 
 const font = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
@@ -35,10 +34,7 @@ export default async function RootLayout({
 					enableSystem
 					disableTransitionOnChange>
 					<SupabaseProvider>
-						<UserProvider>
-							{children}
-							<ClientReloadPreventer />
-						</UserProvider>
+						<UserProvider>{children}</UserProvider>
 					</SupabaseProvider>
 				</ThemeProvider>
 			</body>
